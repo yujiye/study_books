@@ -1,5 +1,9 @@
 #include <stdio.h>
+int fun()
+{
 
+	printf("Qiang\n");
+}
 
 int main()
 {
