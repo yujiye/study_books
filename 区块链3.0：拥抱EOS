@@ -1,0 +1,459 @@
+EOS是当下最火的区块链技术，被社会广泛看好为下一代区块链3.0。不同于以太坊的学习，EOS的主语言是C++，本文作为EOS研究的首篇文章，重点介绍EOS的创新点，它的周边生态，各种概念原理的解释，以及它被看好的原因。而针对EOS的源码学习，原理实现以及并行的C++语言的快速学习与掌握，我会在接下来制定一系列学习计划一一付诸实现。
+
+关键字：EOS，DAPP，石墨烯技术，构建本地节点，公链映射，选举，EOS链配置，术语解释
+
+EOS.IO
+EOS.IO 是由block.one开发的一个基于区块链结构设计的能够支持水平和垂直扩展的去中心化应用的平台。它就像是一个完整的操作系统，可以在上面构建各种应用。EOS.IO提供了账户、认证、数据库，异步通信以及跨平台跨集群的定时应用。它有望支持每秒百万级交易，完全零费率，并可以快速且容易地部署去中心化应用。
+
+以上是我对官方定义的理解，通过这个定义，我们可以抽离出最主要内容，就是EOS的核心竞争力是：
+
+tps：百万级
+gas = 0
+Dapp更加容易高效地被部署
+正如在之前的文章中的分析，下一代区块链不是ico，肯定是大规模的各行各业的Dapp的雄起，就像当年互联网革了传统行业的命一样，所以，能够做好大型商业应用的基建工作的公链就是未来区块链的宠儿。目前，呼喊着百万级tps，手续费为0，快速部署Dapp的EOS无疑切中了所有的要点。
+
+下面针对一些名词进行一个解释，以防止混淆：
+
+EOS，目前指的是基于ERC20在以太坊上发行的代币，用于block.one公司开发软件与社区运营。
+EOS.IO，是由block.one开发的可构建公链的软件源代码。
+EOS platform，采用了EOS.IO软件构建的公链平台。
+Dapp，这里指的是未来在EOS公链平台上基于EOS.IO软件开发部署的去中心化应用。
+EOS
+EOS目前是以太坊ERC20的一个Token，很多看好EOS未来的朋友已经大量买入了此Token（包括我身边很多同事），已成为以太坊Token体系中最强势的一支。在即将到来的5月底，不出意外地话，EOS.IO公链将如期上线，届时，EOS持有者将会通过某种映射方式将资产转移到该公链上。
+
+EOS私募分配机制
+例如，一个周期我计划发放20枚EOS。在这期间，Bob贡献了4个ETH，而Alice贡献了1个ETH，此周期结束。那么总ETH募集量为5ETH，对应发放一个EOS的等价价值为0.25ETH，因此，Bob会得到16枚EOS，而Alice会获得4枚EOS。
+
+所以，当你花费ETH或者BTC参与了EOS私募，一定是等到它一个周期结束才会进行锚定核算，你才会收到EOS token。
+
+有个有意思的是，在EOS官方问答上，它不允许美国公民、实体将EOS当做一种投机性产品购买，当然了，因为区块链的匿名性，EOS这么说并没有什么意义，估计只是做个态度，对了官方也不建议EOS买卖，但你也控制不了OTC和交易所（总之，EOS是戏精）。
+
+另外，block.one为了保证它们不会购买EOS，不会为投资人支付股息，也不会发起任何形式的回购来操纵币盘，它们打算进行一个独立的第三方审计，将会发布一个独立审计报告提供进一步的保证。
+
+EOS上EOS platform的映射机制
+上面讲到了，EOS是存在于以太坊的代币，那么当EOS公链平台推出以后，如何转移这些代币到EOS公币呢？上面我也提到过是通过某种映射方法。那么下面就来具体说说是如何映射的。
+
+2018年6月1日，22:59:59，也就是EOS代币最终的发放周期结束前的23小时倒计时，EOS将被锁定交易，不可被交易。
+
+思考，通过上面的总结作为未来研究EOS的经验，官方讲的内容有多少是做戏，有多少只是提议，毕竟我们是在区块链行业，它无法做到对个人节点行为的控制。所以就以上这句话来讲，它如何控制以太坊EOS代币的交易锁定？我想它是控制不了的，因为交易所和OTC都不会听它的，它最多只是能通过智能合约控制代币发放周期而已。因此，要时刻保持独立思考能力，不要人云亦云，被人洗脑。
+
+我们继续来分析，在上面这个时间点，EOS token的发放将会完成，任何人通过EOS.IO源码启动一个EOS platform的，将能够生成一个JSON文件会映射EOS的公钥为以太坊的EOS token账户的余额。
+
+block.one是EOS.IO公链源码的开发者，它不会配置或启动任何EOS平台，block.one将不会控制何时，如何或者EOS.IO软件是否被使用或实现，或者如何，何时以及是否启动一个EOS platform。因此，您不应该期望，也不能保证您现在或将来会收到任何其他加密token或数字资产（不想对EOS代币负责）。
+
+WebAssembly
+WebAssembly(缩写Wasm)是一种基于堆栈的虚拟机的二进制指令格式。Wasm设计作为一个便携式的针对高级语言的编译器，例如C/C++/Rust，使各种客户端或服务端应用程序都能够在web中部署。
+
+目前Wasm支持Firefox，chrome，IE以及Safari浏览器。WebAssembly技术是在浏览器中不同于JS的另一种存在，但由于C++的高效，Wasm的效率可能会比JS更高，它就是在浏览器中运行C++程序的意思，目前WebAssembly比较好的编译器是LLVM。
+
+石墨烯技术
+石墨烯技术是新一代的区块链技术，基于DPOS共识算法。目前市场上流行的区块链阵营有三种，一种是第一代以比特币为主的生态体系，他们是基于POW共识，纯粹的去中心化，基于p2p的加密数字货币技术；第二种就是以以太坊构成的生态体系，主要以基于智能合约的ERC20的代币体系，他们是基于POW共识，目前以太坊正准备切换到POW+POS的多共识体系；第三种就是进化到目前最强劲的石墨烯技术生态体系，它是基于DPOS（股份授权证明共识），支持高并发，高性能等大规模工业级商业场景的基础设施，诞生了BTS（BitShare）开源商业系统，Steem去中心化社交网络平台以及EOS。未来会针对石墨烯技术以及DPOS共识做一个专门的博文调查。，目前我们看到的石墨烯技术的几个显著特点是：
+
+转账速度特别快
+吞吐量tps极高
+安全性很高，没有原生bug出现
+功能强大，应用性极高
+防御机制
+第一代比特币体系是非常安全的，但瓶颈很多。相比之下，第二代的以太坊有很多独特的创新点，例如智能合约，然而它历史遭受攻击的次数和影响范围都非常严重。最后说基于石墨烯技术的EOS，它是通过个人持有币的数量进行资源分配（包括存储空间、网络带宽以及算力），没有足够币是无法发起攻击的，而如果大量购币攻击，则相当于已经成为房东却要砸自家房子，是得不偿失的行为。所以EOS在防御攻击方面是具备天然免疫力的。
+
+分叉的处理
+由于出块权被牢牢掌握在21个超级节点的手里，如果其中某个节点作恶的话是很容易被追踪到的，这个节点作恶的表现可能是在它出块的轮次人为造成了一个分叉，此时，需要21个节点中的15个节点进行确认，通过确认的这一区块被认为是主链上不可逆的一个块，任何不存在该块的都会被看做无效。这样就避免了分叉的可能。
+
+DApp
+EOS通过石墨烯基础技术，再加上自身的优化，可以达到百万级tps，同时不同于以太坊停留在Paas（平台即服务）的属性，EOS开拓思路增加了SaaS（软件即服务）的能力，加入了Dapp通用的账号体系、权限身份认证、异步通信、自描述数据库、自描述接口以及上面提到的WebAssembly浏览器客户端部署工具包，总之，拥有这一切优势的EOS将真正成为了未来工业级应用的平台。
+
+不过我们也要感谢以太坊提供的智能合约和Dapp的思想，在EOS得到了广泛而有效地发扬，我们可以开发自己的Dapp部署在EOS上，通过持币数量来获得对应比例的资源（包括存储空间，网络带宽以及算力），这是革了AWS SAAS和PaaS的命（恐怕未来AWS只有提供云计算基础设施的市场了）。
+
+超级节点的选举机制
+不同于以太坊POA，因为以太坊的POA是基于非常小场景的私链或者联盟链的，这与大规模对外公开的公链EOS的场景是不同的。不过在我还未研究过EOS源码的当下来看，DPOS的超级节点的选举以及出块的机制与POA如出一辙。
+
+用户节点通过rpc接口进行投票，这里面不同的地方是：EOS是通过持币数量来决定手里有几票（这也是权益证明的精髓所在），而以太坊POA只是一个节点一票的形式。
+节点被选举成功，以太坊POA是没有确定数量限制的，随时按照全网投票与票数清零以后的每一轮投票结果去增删超级节点。而EOS则不同，超级节点目前只有21个，在整个投票周期结束以后，排名前21位即胜任。
+超级节点的要求不同，以太坊POA的认证节点与普通节点并非有任何差别。而EOS的超级节点则不同，这21个超级节点必须符合非常高的性能要求以及运维能力，社区规模等。
+机会均等概念在EOS超级节点中仍然是存在的，不过当一个超级节点出块方面出现问题，在一定规则下会被丢弃，然后重新选出新的节点替代它作为超级节点的身份。
+EOS术语解释
+Account，账户
+Authority，权力
+Block，缩写Blk，每个区块可包含0个或多个交易，以及一个对前置区块的加密连接。不可逆。
+DAC，分权自治集体，或者是分权自治公司。
+DAO，分权自治组织
+Deferred Transaction，缩写defTx，延期交易。该交易是有智能合约所创建，会在未来的某个时间被执行。这个交易也能够创建另一个在其之后的交易。因此，延期交易可以创建无限循环的顺序交易。用户授权一个延期交易必须指定到执行的时刻拥有足够的带宽，存储来执行预期交易。
+DLTs，分布式账本技术。一种分布式账本（也被称作共享式账本），它是一个基于复制、共享以及同步数字化资产的跨站点、跨国家、跨机构的共识。
+DPoS，授权权益证明。此外，也可以代表民主即权益证明。DPoS是共识算法的一种，即区块生产者能够针对交易或区块的真实性，可验证，不可逆等特性达成共识的一种方法。
+Key pair，缩写keys，一个密钥对，包括公钥和其对应的私钥。
+larimer，一种EOS的计量单位，等于0.0001 EOS。（性质如同以太坊中的Wei）
+Master Password，用于解锁，或解密一个钱包文件的密码。
+Action，一个对区块链的改变动作。可以是一个或这多个动作组成一个交易。
+Non-Producing Node，非生产节点，也可以被理解为普通节点。这是一个完整的区块链节点，但它智能观察和验证区块，以及只能维护自己本地区块链的拷贝。一个普通节点可以在一个“备用池”中，通过投票流程称为生产节点（具备出块权的超级节点）一个超级节点，也会被投票出局，成为一个普通节点。但是值得注意的是，大多数普通节点并不在“备用池”中。
+Oracle，在区块链和智能合约的上下文中，它是一个代理，被智能合约使用用来找到和验证实际发生的并提交这个信息到区块链上。
+peer-to-peer,p2p，对等计算或网络是一个分布式应用程序架构，在对等环境下，它被分去为任务或者是工作量。对等节点是拥有等价权限，在应用程序中的参与机会均等。他们组成了点对点的网络节点。
+Permission，加权的，安全机制，通过评估它的签名权力来确定一个信息是否被正确授权。
+Private Key，用来签名交易的私钥。
+Public Key，缩写pub key，公钥，会在交易间被传输。
+Scope，作用域，智能合约的作用域，智能合约智能写入他们同一个作用域的自己的其他合约，而只能够读取其他作用域的合约。
+Smart Contract, 智能合约，一个计算机协议，旨在促进、验证或执行谈判。
+Standby Pool，100个全节点的集合，渴望被选中为21个超级节点之一，他们实际上已经拥有了超级节点的能力，无论何时链需要替换一个超级节点时，就会从备用池中选择。
+Transaction，缩写Tx，Txn。它有事务的含义，一般我们称作交易。它是一个完整的原子的区块链的变化，一个或多个消息的组合，在EOS中通常是由一个智能合约来执行。
+Wallet，钱包，会生成一个加密钱包文件或是通过客户端来管理，例如cleos。它管理了私钥以及用一个安全的方式去促进交易的签名。钱包可以被锁定或解锁。
+Block Producer, 缩写bp。21个超级节点之一，是目前正在出块轮次的那个超级节点。
+构建本地环境
+EOS三个组件：
+
+nodeos：服务端区块链节点组件
+cleos：命令行接口，与区块链交互，管理钱包，管理账户，在区块链上调用方法。（很重要，相当于以太坊web3）
+keosd：管理EOSIO钱包的组件。
+接下来，我们将构建这些EOSIO组件，并将它们部署在一个主机，通过单个节点对网络(testnet)进行测试与配置。
+
+构建源码
+获取源码
+recursive参数会将所有子组件自动克隆下来，最终我们会在本地得到全部完整的源码。
+
+git clone https://github.com/EOSIO/eos --recursive
+自动构建源码。
+cd eos && ./eosio_build.sh
+构建时间较长，最终构建成功的页面如下：
+
+[100%] Built target cleos
+Scanning dependencies of target nodeos
+[100%] Building CXX object programs/nodeos/CMakeFiles/nodeos.dir/main.cpp.o
+[100%] Linking CXX executable chain_test
+[100%] Linking CXX executable nodeos
+[100%] Built target chain_test
+[100%] Built target nodeos
+
+
+     _______  _______  _______ _________ _______
+    (  ____ \(  ___  )(  ____ \\__   __/(  ___  )
+    | (    \/| (   ) || (    \/   ) (   | (   ) |
+    | (__    | |   | || (_____    | |   | |   | |
+    |  __)   | |   | |(_____  )   | |   | |   | |
+    | (      | |   | |      ) |   | |   | |   | |
+    | (____/\| (___) |/\____) |___) (___| (___) |
+    (_______/(_______)\_______)\_______/(_______)
+
+    EOS.IO has been successfully built. 0:32:57
+
+    To verify your installation run the following commands:
+
+    /home/liuwenbin/opt/mongodb/bin/mongod -f /home/liuwenbin/opt/mongodb/mongod.conf &
+    cd /home/liuwenbin/eos/build; make test
+
+    For more information:
+    EOS.IO website: https://eos.io
+    EOS.IO Telegram channel @ ***EOSProject
+    EOS.IO resources: https://eos.io/resources/
+    EOS.IO wiki: https://github.com/EOSIO/eos/wiki
+手动构建源码
+安装开发工具包
+sudo apt-get update
+wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+sudo apt-get install clang-4.0 lldb-4.0 libclang-4.0-dev cmake make \
+                     libbz2-dev libssl-dev libgmp3-dev \
+                     autotools-dev build-essential \
+                     libbz2-dev libicu-dev python-dev \
+                     autoconf libtool git mongodb
+wget 下载llvm-key出错，可以按照提示加入参数--no-check-certificate搞定。
+
+依赖
+基于我本机是Ubuntu16.04，除了使用上面的自动编译以外，也可以手动安装，不怕折磨的话。
+
+目前EOS当前版本的依赖包括：
+
+Clang 4.0.0
+CMake 3.5.1
+Boost 1.66
+OpenSSL
+LLVM 4.0
+secp256k1-zkp (Cryptonomex branch)
+依赖安装请参照官方文档
+
+跑单元测试
+cd build && make test
+这一步是为了验证源码功能完整度，耗时也较久。
+
+安装命令
+sudo make install
+命令会被安装在/usr/local。执行完这个命令以后，我们可以在系统任何位置进行命令启用。
+
+启动一个单独节点
+构建完成后，会在build/programs/目录中出现nodeos文件夹，这是我们要启动节点的工具。通过以下命令启动你自己的独立节点区块链
+
+cd programs/nodeos && ./nodeos -e -p eosio --plugin eosio::wallet_api_plugin --plugin eosio::chain_api_plugin --plugin eosio::account_history_api_plugin 
+这条命令中，可执行文件./nodeos后面有很多参数，好看的是后面的plugin是启动时对插件的配置，剩下的参数配置我们会在接下来介绍到。启动以后，日志打印出来相关信息：
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos/build/programs/nodeos$ ./nodeos -e -p eosio --plugin eosio::wallet_api_plugin --plugin eosio::c
+hain_api_plugin --plugin eosio::account_history_api_plugin 
+3054170ms thread-0   wallet_plugin.cpp:41          plugin_initialize    ] initializing wallet plugin
+3054170ms thread-0   http_plugin.cpp:141           plugin_initialize    ] host: 127.0.0.1 port: 8888 
+3054170ms thread-0   http_plugin.cpp:144           plugin_initialize    ] configured http to listen on 127.0.0.1:8888
+3054170ms thread-0   chain_plugin.cpp:99           plugin_initialize    ] initializing chain plugin
+3054170ms thread-0   net_plugin.cpp:2628           plugin_initialize    ] Initialize net plugin
+3054170ms thread-0   net_plugin.cpp:2644           plugin_initialize    ] Setting net_plugin logging level to info
+3054170ms thread-0   net_plugin.cpp:2669           plugin_initialize    ] host: 0.0.0.0 port: 9876 
+3054170ms thread-0   net_plugin.cpp:2745           plugin_initialize    ] my node_id is 86aa711400110362b7a94d9468fc45bdbfa8887a3bdaf9502dbea59694179b09
+3054170ms thread-0   main.cpp:90                   main                 ] nodeos version 96ee0325
+3054170ms thread-0   main.cpp:91                   main                 ] eosio root is /home/liuwenbin/.local/share
+3054170ms thread-0   http_plugin.cpp:213           plugin_startup       ] start listening for http requests
+3054170ms thread-0   wallet_api_plugin.cpp:70      plugin_startup       ] starting wallet_api_plugin
+3054170ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/wallet/create
+3054170ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/wallet/get_public_keys
+3054170ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/wallet/import_key
+3054170ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/wallet/list_keys
+3054170ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/wallet/list_wallets
+3054170ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/wallet/lock
+3054170ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/wallet/lock_all
+3054170ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/wallet/open
+3054170ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/wallet/set_timeout
+3054170ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/wallet/sign_transaction
+3054170ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/wallet/unlock
+3054170ms thread-0   chain_plugin.cpp:178          plugin_startup       ] 
+ generating default genesis file /home/liuwenbin/.local/share/eosio/nodeos/config/genesis.json
+3054209ms thread-0   chain_plugin.cpp:208          plugin_startup       ] starting chain in read/write mode
+3054209ms thread-0   chain_plugin.cpp:213          plugin_startup       ] Blockchain started; head block is #0, genesis timestamp is 2018-03-01T12:00:00.000
+3054209ms thread-0   chain_api_plugin.cpp:62       plugin_startup       ] starting chain_api_plugin
+3054209ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/chain/abi_bin_to_json
+3054209ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/chain/abi_json_to_bin
+3054209ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/chain/get_account
+3054209ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/chain/get_block
+3054209ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/chain/get_code
+3054209ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/chain/get_currency_balance
+3054209ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/chain/get_currency_stats
+3054209ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/chain/get_info
+3054209ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/chain/get_required_keys
+3054209ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/chain/get_table_rows
+3054209ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/chain/push_block
+3054209ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/chain/push_transaction
+3054209ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/chain/push_transactions
+3054209ms thread-0   account_history_api_plugin.cpp:45 plugin_startup       ] starting account_history_api_plugin
+3054209ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/account_history/get_controlled_accounts
+3054209ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/account_history/get_key_accounts
+3054209ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/account_history/get_transaction
+3054209ms thread-0   http_plugin.cpp:242           add_handler          ] add api url: /v1/account_history/get_transactions
+3054209ms thread-0   net_plugin.cpp:2757           plugin_startup       ] starting listener, max clients is 25
+3054209ms thread-0   producer_plugin.cpp:161       plugin_startup       ] producer plugin:  plugin_startup() begin
+3054209ms thread-0   producer_plugin.cpp:166       plugin_startup       ] Launching block production for 1 producers.
+
+*******************************
+*                             *
+*   ------ NEW CHAIN ------   *
+*   -  Welcome to EOSIO!  -   *
+*   -----------------------   *
+*                             *
+*******************************
+
+Your genesis seems to have an old timestamp
+Please consider using the --genesis-timestamp option to give your genesis a recent timestamp
+
+3054209ms thread-0   producer_plugin.cpp:176       plugin_startup       ] producer plugin:  plugin_startup() end
+eosio generated block bd1a5181... #1 @ 2018-04-13T02:50:54.500 with 0 trxs, lib: 0
+eosio generated block a8c18ba3... #2 @ 2018-04-13T02:50:55.000 with 0 trxs, lib: 1
+eosio generated block 1e4c703f... #3 @ 2018-04-13T02:50:55.500 with 0 trxs, lib: 2
+eosio generated block d4c29cd4... #4 @ 2018-04-13T02:50:56.000 with 0 trxs, lib: 3
+下面来逐一分析一下这个日志内容，可以看出EOS启动私链节点是通过插件实现的，在启动私链前，要对插件进行初始化配置，启动各依赖组件处理器。下面来列举一下主要插件内容：
+
+wallet_plugin，钱包管理相关，启动阶段只出现过一次，说明它的功能主要依赖启动后的操作，而在启动期间需要做的配置很少。
+wallet_api_plugin，依赖于wallet_plugin，出现一次，应该是提供外部调用与钱包交互的接口服务。
+http_plugin，启动阶段大量出现的插件，说明在准备期，针对HTTP的配置和添加接口服务非常多。配置包括url，端口，监听。接口服务包括钱包相关，链相关，账户相关的一系列api地址。
+chain_plugin，链插件配置，出现了几次，除了初始化启动以外，还有针对链数据读取模式的配置为read/write模式，生成创世块配置文件genesis.json，以及展示了创世区块的各种属性信息。
+chain_api_plugin，同样的，依赖于chain_plugin，提供外部调用链相关操作的接口服务。
+net_plugin，网络插件，出现了几次，是对网络节点的基本配置，包括网络日志的级别为info，本地网络监听端口，生成节点id。最后启动监听器，并设置了以该网络节点为服务器的客户端最多能够连入25个。
+main，主插件，对eosio这整个软件的一个主要插件，配置了eosio的版本以及展示了eosio工作的本地root地址。
+account_history_api_plugin，顾名思义，账户历史接口插件，估计是与账户历史相关的供外部调用的接口服务。
+producer_plugin，区块生产者插件，插件启动。
+以上出现的所有插件亦可理解为组件。
+
+接着看日志，提示我创世块时间戳过时，可以通过一个参数来修改，下面我尝试修改一下，在以上启动命令加入了参数，重新启动：
+
+--genesis-timestamp 2018-04-13T12:00:00.000
+重新启动以后，打印出来的日志中，前面的都是相同的，我们从producer_plugin贴出来是：
+
+862009ms thread-0   producer_plugin.cpp:161       plugin_startup       ] producer plugin:  plugin_startup() begin
+862009ms thread-0   producer_plugin.cpp:166       plugin_startup       ] Launching block production for 1 producers.
+862009ms thread-0   producer_plugin.cpp:176       plugin_startup       ] producer plugin:  plugin_startup() end
+862501ms thread-0   fork_database.cpp:77          _push_block          ] Number of missed blocks: 2783
+eosio generated block 8e2a6ce1... #34 @ 2018-04-13T03:14:22.500 with 0 trxs, lib: 33
+eosio generated block eb5e67b9... #35 @ 2018-04-13T03:14:23.000 with 0 trxs, lib: 34
+eosio generated block 5aa06ff6... #36 @ 2018-04-13T03:14:23.500 with 0 trxs, lib: 35
+可以看到，那个关于创世块时间戳的提示已经消失，producer_plugin插件启动开始与完毕。接下来就是
+
+fork_database程序，推送区块，报出了消失区块好2783。TODO：这一行还待未来分析解决。
+
+接下来就是正常出块了，由于我们本地启动的节点一定是具备出块权的（目前只有一个节点未涉及共识），这些块是不包含任何交易信息的，出块速度很快。
+
+停止
+断开私链直接按下复制键（Ctrl+C）即可，日志中也有体现：
+
+eosio generated block de403b91... #37 @ 2018-04-13T03:14:24.000 with 0 trxs, lib: 36
+eosio generated block f40f0e68... #38 @ 2018-04-13T03:14:24.500 with 0 trxs, lib: 37
+eosio generated block c1b717d0... #39 @ 2018-04-13T03:14:25.000 with 0 trxs, lib: 38
+865075ms thread-0   net_plugin.cpp:2771           plugin_shutdown      ] shutdown..
+865075ms thread-0   net_plugin.cpp:2774           plugin_shutdown      ] close acceptor
+865075ms thread-0   net_plugin.cpp:2777           plugin_shutdown      ] close 0 connections
+865075ms thread-0   net_plugin.cpp:2785           plugin_shutdown      ] exit shutdown
+可以看到私链停止时，都是通过net_plugin插件来操作，操作的方法是与plugin_startup对应的plugin_shutdown，步骤为：
+
+开始关闭的标识
+关闭接收器acceptor
+关闭连接
+完成私链停止工作，退出shutdown程序
+以上内容在未来的源码分析中均会涉及。
+
+配置
+EOS环境启动以后，可以在本地目录：~/.local/share/eosio/nodeos/ 找到链相关文件：
+
+liuwenbin@liuwenbin-H81M-DS2:~/.local/share/eosio/nodeos$ tree
+.
+├── config
+│   ├── config.ini
+│   └── genesis.json
+└── data
+    ├── blocks
+    │   ├── blocks.index
+    │   └── blocks.log
+    └── shared_mem
+        ├── shared_memory.bin
+        └── shared_memory.meta
+
+4 directories, 6 files
+根目录下包含config和data两个目录，data目录中存储了区块运行时数据，日志以及共享内存相关数据，我们重点来看config文件夹中的内容：
+
+genesis.json
+{
+  "initial_timestamp": "2018-03-01T12:00:00.000",
+  "initial_key": "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV",
+  "initial_configuration": {
+    "base_per_transaction_net_usage": 100,
+    "base_per_transaction_cpu_usage": 500,
+    "base_per_action_cpu_usage": 1000,
+    "base_setcode_cpu_usage": 2097152,
+    "per_signature_cpu_usage": 100000,
+    "per_lock_net_usage": 32,
+    "context_free_discount_cpu_usage_num": 20,
+    "context_free_discount_cpu_usage_den": 100,
+    "max_transaction_cpu_usage": 10485760,
+    "max_transaction_net_usage": 104857,
+    "max_block_cpu_usage": 104857600,
+    "target_block_cpu_usage_pct": 1000,
+    "max_block_net_usage": 1048576,
+    "target_block_net_usage_pct": 1000,
+    "max_transaction_lifetime": 3600,
+    "max_transaction_exec_time": 0,
+    "max_authority_depth": 6,
+    "max_inline_depth": 4,
+    "max_inline_action_size": 4096,
+    "max_generated_transaction_count": 16
+  },
+  "initial_chain_id": "0000000000000000000000000000000000000000000000000000000000000000"
+}
+可以看到初始化时间戳，初始化key，以及初始链id，链配置。其中链配置又包含了基础每笔交易的网络使用size、cpu使用size，每个方法、每个setcode、每个签名的cpu使用size，每个锁的网络使用size，空闲期间的cpu使用度折扣上下文，交易的cpu、网络使用度的最大值，区块的最大网络使用size，目标区块的网络使用size，交易最大存活生命周期长度、执行时间，权限深度的最大值，最大内联深度，最大内联操作size，交易的最大生成数量。
+
+上面对genesis.json创世块描述文件进行了平铺直叙，我们可以看到，链时间，链key，链id都比较常见，而细致入微到标识了每个方法、每个签名等等的资源分配，这是很令人惊奇的。说明了
+
+EOS对资源的控制是非常看中的。
+
+config.ini
+这是一个全局配置文件，就像java的property文件一样。这里面的配置会被细分到是由哪一个插件来使用的，例如针对http_plugin配置的地址端口号等等，我们也可以通过手动修改这些配置来控制链的一些表现。config.ini这个全局配置文件就是开放给外部人员，作为各种功能的静态变量配置，功能开关等工具使用。下面针对配置项逐一分析：
+
+属于account_history_plugin插件的配置
+filter_on_accounts：功能是实现仅追踪配置值的账户产生的交易，默认注释掉该配置项，意思是不设过滤器，追踪所有交易。
+get-transactions-time-limit：执行单个get_transactions调用的执行时间，单位是豪妙，默认值为3（意思是3毫秒读不到就丢弃）
+属于chain_plugin插件的配置
+genesis-json，指定创世块配置文件位置，默认值是“genesis.json”
+genesis-timestamp，复写初始化创世块时间戳，我们上面不是在启动命令中通过加入--genesis-timestamp参数来配置该值了么，在这里配置以后重启会是相同的效果。默认值是注释掉，启动时时间戳一般会过时。
+block-log-dir：是区块日志的存储位置，绝对路径或者应用程序的相对路径。
+checkpoint：是一对区块高度+区块id，用来作为检查点。默认注释掉，不设置检查点。（检查点的使用会在之后介绍,TODO）
+max-reversible-block-time：允许可逆区块在被确认为无效之前存在的时间，默认为-1，不允许出现可逆区块。
+max-pending-transaction-time：允许pending交易在无效之前的执行时间，默认为-1，不允许出现pending的交易。
+max-defered-transaction-time：允许延迟执行交易到区块的推送时间，默认值20，
+wasm-runtime：复写默认的WebAssembly的runtime。默认是注释掉（TODO:啥意思）
+属于faucet_testnet_plugin配置
+faucet-create-interval-ms：创建账户的间隔，默认1秒钟。
+faucet-name：创建账户的创建器的名字。默认就是faucet。
+faucet-private-key：公钥，WIF(TODO：解释WIF)私钥，用于faucet创建账户签名。默认值是在源码下载时指定的，我们可以通过工具自己更改。
+属于http_plugin配置
+http-server-address：本地IP端口，用于监听进入的http连接。默认值为127.0.0.1:8888
+access-control-allow-origin：允许访问控制，每个请求会返回一个确定的access-control-allow-origin。默认注释掉，不设置特殊访问限制。
+access-control-allow-headers：同上，只是不是http请求的origin控制了，而是通过http头来控制。默认也注释掉，不设置特殊访问限制。
+access-control-allow-credentials：如果有特殊的访问限制证书则返回true。默认值为flase，不设限。
+属于mongo_db_plugin配置
+mongodb-queue-size：nodeos和mongodb组件线程之间的队列大小。默认值为256。
+mongodb-uri：MongoDB的uri连接字符串，如果不配置则该mongodb组件是未被激活的，而使用默认的‘EOS’数据库。默认值不配置。
+属于net_plugin配置
+p2p-listen-endpoint：实际的主机加端口，用来监听进来的p2p连接。默认值为0.0.0.0:9876
+p2p-server-address：一个外部访问的主机加端口，用于标识当前节点。默认使用上面的p2p-listen-endpoint配置。
+p2p-peer-address：公共的对等节点的端点位置，提供外部连接。使用多重p2p-peer-address选项作为构成网络的需要。默认值是注释掉，不设置p2p相关配置。（TODO，p2p网络设置测试）
+agent-name：在对等节点之间，用于标识一个节点而设置的名字。
+allowed-connection：连接许可，可选值包括
+any：允许所有连接，不设限制。
+producers：仅允许区块生产者连接，节点key是不需要的。
+specified：配置节点key作为特殊连接，可以与producers节点key重复（要配置多个的时候可以不适用producers，而用这个，否则没意义）
+none：谁都不允许连入。
+peer-key：可选项，允许连接的节点公钥。可以被多次使用。默认值是注释掉，不使用该配置项。
+peer-private-key：公钥，WIF私钥元组，可被指定多次。默认注释掉，不使用。
+log-level-net-plugin：日志级别包括all,debug,info,warn,error,off，这个不说了
+max-clients：接收连接的客户端的最大数量，设为0的话表示没有限制。默认25个。
+connection-cleanup-period：在清理死连接之前，等待的秒数。默认值是30s。
+network-version-match：准确匹配对等网络版本。
+sync-fetch-span：同步获取量，同步时，从任何个人节点取回作为一个chunk（大块）的区块数量，默认是100个。
+属于producer_plugin配置
+enable-stale-production：陈旧生产能力。即使链是陈旧的，也能够出块。默认值是false，不允许陈旧链（TODO:什么是陈旧链）
+required-participation：必须参与出块。必须参与按序出块的区块生产者的百分比。默认值是33。至少33%的区块生产者是要参与到按序出块的。
+producer-name：producer的ID，受节点控制。可能多次指定。默认值是注释掉，不使用。
+private-key：私钥，公钥，WIF私钥元组，可以指定多次。默认值已有，可以修改。
+属于wallet_plugin配置
+wallet-dir：钱包文件的路径，绝对路径或者应用程序的相对路径。默认值是当前路径“.”
+unlock-timeout：解锁钱包的超时时间，单位是秒。钱包在没有活动一段时间以后会自动上锁，这些活动可来自于任何钱包命令，例如list-wallet等。默认是注释掉，没有超时时间，不自动上锁。
+eosio-key：在钱包创建时，eosio秘钥将被自动导入，默认是注释掉，先不设置，因为我吗是新创建钱包，未通过现有钱包导入。
+plugin：激活插件，可以被特殊指定多次。默认是注释掉，没有特例，是插件都好使。
+配置中出现的所有time的单位一般都是毫秒。
+
+启动命令参数
+配置文件加启动命令
+上面我们通过命令
+
+ ./nodeos -e -p eosio --genesis-timestamp 2018-04-13T12:00:00.000 --plugin eosio::wallet_api_plugin --plugin eosio::chain_api_plugin --plugin eosio::account_history_api_plugin 
+启动了本地EOS环境。下面我们针对这个启动脚本的使用参数进行学习：
+
+-e：enable-stale-production，参加上面config.ini的相关说明。设置以后相当于true。
+-p：producer-name，给定了一个名字“eosio”用于出块者名字。
+--plugin：就是config.ini最后一个配置字段。
+所以我在config.ini针对以上命令进行静态配置。
+
+enable-stale-production = true
+producer-name = eosio
+plugin的配置方式：
+
+# Load the block producer plugin, so you can produce blocks
+plugin = eosio::producer_plugin
+# Wallet plugin
+plugin = eosio::wallet_api_plugin
+# As well as API and HTTP plugins
+plugin = eosio::chain_api_plugin
+plugin = eosio::http_plugin
+# This will be used by the validation step below, to view account history
+plugin = eosio::account_history_api_plugin
+配置结束以后，由于上面我们也执行了命令安装（sudo make install）,下面我们可以直接在任何位置使用命令
+
+nodeos
+即可启动与之前命令相同的EOS本地环境。
+
+指定配置文件地址
+我们可以在机器中维护多套config.ini 以及 genesis.json文件，然后启动EOS环境时通过参数
+
+--config-dir：指定地址用来加载配置文件，绝对路径或应用程序相对路径。
+指定运行时数据地址
+我们也可以通过启动参数指定运行时数据的存储位置。
+
+--data-dir：指定地址用来存放运行时数据，日志以及共享内存相关数据，绝对路径或应用程序相对路径。
+其实config-dir和data-dir就是映射的上面的~/.local/share/eosio/nodeos/的内容，我在上面使用树形结构列举了出来，他们通过启动参数均可指定新的位置。
+
+总结
+本文是EOS的入门手册，介绍了EOS基本概念和术语解释，包括发展历史，私募、代币、公链映射方案，选举机制、Dapp以及防御机制，最后对本地环境进行了构建，包括自动和手动的，以及启动参数，结合分析了链的各种插件的配置参数，语义。接下来我分三个大步来加深自身的EOS的专业度：
+
+下一步我将通过两篇文章重点快速学习C++语言基础
+然后通过一到两篇文章继续EOS的分析研究，会根据官方文档从智能合约、开发工具、交互工具、账户钱包权限模块去进一步介绍EOS，同时会加入对RPC的使用研究
+再下一步我会根据EOS白皮书的结构，结合源码去具体分析EOS各个插件的实现、区块通信、DPOS共识算法，账户管理，并发，Token，治理，脚本与虚拟机
+参考资料
+EOS官方文档
+
+更多文章请转到醒者呆的博客园。
