@@ -1,2 +1,17 @@
 (一)eos开发实战dapp+游戏--环境搭建
 https://blog.csdn.net/u010665359/article/details/82906497
+
+这个方法在ubuntu下可以
+在selinux下会有点小问题，提示permission denied---seliniux作祟
+
+加上
+--privileged=true
+就可以了
+
+
+#!/bin/bash
+echo "start nodeos !"
+
+/usr/bin/docker run --rm --name nodeos -v /home/eosio/data-dir:/opt/eosio/bin/data-dir --privileged=true -p 8888:8888 -p 9
+876:9876 -t eosio/eos nodeosd.sh --max-transaction-time=1000 -e --http-alias=nodeos:8888 --http-alias=127.0.0.1:8888 --htt
+p-alias=localhost:8888 arg1 arg2
