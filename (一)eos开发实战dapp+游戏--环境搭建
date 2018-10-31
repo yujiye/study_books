@@ -15,3 +15,36 @@ echo "start nodeos !"
 /usr/bin/docker run --rm --name nodeos -v /home/eosio/data-dir:/opt/eosio/bin/data-dir --privileged=true -p 8888:8888 -p 9
 876:9876 -t eosio/eos nodeosd.sh --max-transaction-time=1000 -e --http-alias=nodeos:8888 --http-alias=127.0.0.1:8888 --htt
 p-alias=localhost:8888 arg1 arg2
+
+EOS有三大命令：
+
+         1.nodeos - 服务器端的区块链节点组件
+
+         2.keosd   - 钱包管理组件
+
+         3.cleos    - 操作 nodeos 和 keosd 的命令行工具（使用最多）
+
+EOS四大概念：
+
+       1.key.所谓的密钥。密钥是成对出现(key-pair)，分为公钥和私钥，这个很重要公钥要自己保存好，丢失了你账号也就废了。
+
+       2.wallet钱包。只需要知道钱包是用来管理秘钥key就够了，要执行各种操作前需要导入到钱包。
+
+       3.account账号。相比比特币和以太坊只有密钥，EOS引入了账号概念。这个不难理解就是自己的账户信息等，当然它对应的是一队秘钥.仅能是以下字符串：".12345abcdefghijklmnopqrstuvwxyz"; 在这里必须吐槽下EOS账号创建必须是另外一个人帮着创建，而且需要抵押一定的EOS.
+
+     4.智能合约。不多说就是我们程序的代码实现需要的功能。
+
+(1).配置下环境cleos命令。
+
+     为什么？我们启动了节点后，在本地环境并不能直接使用三大命令（docker启动方式），必须进入到容器里面才能操作。下面如何进入容器。
+
+          1.docker ps -l  查看运行的容器
+
+          2.docker exec -it 容器明或者id /bin/bash
+
+          3.exit 退出容器
+--------------------- 
+作者：世界太疯狂 
+来源：CSDN 
+原文：https://blog.csdn.net/u010665359/article/details/82907677 
+版权声明：本文为博主原创文章，转载请附上博文链接！
