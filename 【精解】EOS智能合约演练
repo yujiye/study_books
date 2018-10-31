@@ -1,0 +1,565 @@
+EOS，智能合约，abi,wasm,cleos,eosiocpp,开发调试，钱包，账户，签名权限
+
+
+
+热身
+本文旨在针对EOS智能合约进行一个完整的实操演练，过程中深入熟悉掌握整个EOS智能合约的流程，过程中出现的问题也会及时研究并入我们自己的知识体系。本文会主要跟随EOS官方Wiki的智能合约部分进行研究学习，主要分为
+
+开启一个私有链
+创建钱包
+载入基础IO的智能合约支持
+创建账户
+智能合约学习：
+token
+交易所
+智能合约实战：
+Helloworld
+准备
+EOS的智能合约采用C++ 编写，因为C++ 的高效性，没有C++ 编程基础的同学可以先学习《Efficient&Elegant：Java程序员入门Cpp》。EOS中用户开发的应用程序或代码都是通过WebAssembly（WASM）来与主链进行交互的，它的编译工具是clang.llvm。关于EOS相关的基础准备请先过目《区块链3.0：拥抱EOS》，这里面介绍了包括EOS概念，安装部署以及工具等基础内容，其中包括了上面提到的《开启一个私有链》。这里还有一些准备知识需要过目：
+
+智能合约之间的交互通过action和共享数据文件
+这个共享数据文件在我本机的位置是.local/share/eosio/nodeos/data/shared_mem，随着节点挖矿运行的时间越来越久，这个目录下的数据文件也越来越大。
+一个合约可以异步只读访问另一个合约的共享数据文件。
+针对其他读取权限，通过资源限制算法可以有效避免异步通信结果失真的问题。
+合约之间的两种交互模式：
+内联，意思就是直接采用内部函数体发起，调用其他函数的方式。这可以保证交易无阻碍执行，不必通知外部失败或者成功结果，同时内联也可保证交易始终处于同一作用域以及权限。
+延迟，通过生产者的判定来决定延后按时执行，可能会发生timeout的问题，但是这种方式可以跨多个作用域工作，并且可以携带着发送给它的合约权限。
+action和transaction：
+action是一个动作，账户和合约交互是通过action，可以单独发送一个action。
+Transaction是一组动作。所有action都必须成功，该Transaction才会成功。
+接收到交易哈希表示节点成功接受了这个交易，也意味着其他生产者也有很大可能接收它。
+交易验证需要通过查看已打包区块中含有的交易历史来确定。
+这些都了解了以后，我们继续智能合约的准备。
+
+创建钱包
+首先，先确定区块链中钱包的概念：
+
+钱包是一个私钥库，用来授权发生在区块链上的动作（action，记住这个概念）。这些私钥使用密码生成，被加密存储在磁盘上。这个密码应该被储存在一个安全的密码管理器中。
+
+提取一下重点：
+
+钱包是一个私钥库
+私钥是通过密码生成
+操作流程：
+
+先启动私链，通过命令nodeos即可。
+创建钱包，使用命令cleos wallet create，这是通过插件eosio::wallet_api_plugin完成的操作。
+liuwenbin@liuwenbin-H81M-DS2:~$ cleos wallet create
+Creating wallet: default
+Save password to use in the future to unlock this wallet.
+Without password imported keys will not be retrievable.
+"PW5KeMG82A6zEmmHK4sBj3HE8pxBYBFw4CXVoQGt24Zy7AoRgMWxn"
+default改为自定义钱包名字wbs：
+
+liuwenbin@liuwenbin-H81M-DS2:~$ cleos wallet create -n wbs
+Creating wallet: wbs
+Save password to use in the future to unlock this wallet.
+Without password imported keys will not be retrievable.
+"PW5KPAwucXR66NqqzW5R5wdkHCMNGyHLrCWVPaE1nhj7hfacP7ZaL"
+wbs钱包解密：
+
+liuwenbin@liuwenbin-H81M-DS2:~$ cleos wallet unlock -n wbs
+password: Unlocked: wbs
+加密即改为：
+
+liuwenbin@liuwenbin-H81M-DS2:~$ cleos wallet lock -n wbs
+Locked: wbs
+如果不加-n参数，即操作默认钱包。
+
+导入初始账户eosio的主秘钥到钱包
+所有新的blockchains，都是通过主秘钥启动，唯一初始账户：eosio。要与区块链交互，需要将这个初始账户的私钥导入到你的钱包。
+
+这个主秘钥我们在上一篇文章也分析到了，是在~/.local/share/eosio/nodeos/config文件夹下的config.ini文件中自动配置的（可修改，默认安装EOS会生成一个）。
+
+# 值为[公钥，私钥WIF编码的]
+private-key = ["EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3"]
+Private key should be encoded in base58 WIF。所以上篇文章中经常出现的WIF的意思是一种base58编码方式。
+
+$ cleos wallet import 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
+imported private key for: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+载入基础IO智能合约
+现在我们拥有了一个钱包default，该钱包内部包含一个默认主密钥的账户eosio，默认的智能合约eosio.bios已经可以使用，这个合约是EOS很多基本action的基础系统，所以要保证这个合约的有效执行。这个合约可以让你能够直接控制资源分配，并且有权限访问API。在公链上，这个合约将管理已募集和待募集token，以储备带宽给CPU、内存以及网络活动使用。我们提取一下重点：
+
+创建钱包
+导入账户
+默认合约eosio.bios，它的功能是控制资源分配。
+这个默认合约eosio.bios可以在EOS源码位置contracts/eosio.bios找到。可以通过cleos来指定这个合约执行：
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos set contract eosio build/contracts/eosio.bios -p eosio
+Reading WAST/WASM from build/contracts/eosio.bios/eosio.bios.wast...
+Assembling WASM...
+Publishing contract...
+executed transaction: 36736dabac246732ef389fb5dd47099887854e25178a320b0e288324b5c87a9c  3288 bytes  2200576 cycles
+#         eosio <= eosio::setcode               {"account":"eosio","vmtype":0,"vmversion":0,"code":"0061736d0100000001581060037f7e7f0060057f7e7e7e7e...
+#         eosio <= eosio::setabi                {"account":"eosio","abi":{"types":[],"structs":[{"name":"set_account_limits","base":"","fields":[{"n...
+命令行工具仍旧是使用cleos，通过set contract来执行指定合约，后面跟着账户名称（这里是默认的eosio，我们刚刚导入的），然后是指定合约的路径。
+命令最后的“-p eosio”的含义是：使用账户eosio（使用的是账户的私钥）来为这个action签名。
+读取 WAST/WASM文件（这个文件是被新部署到build目录下的）
+装配 WASM
+发布合约
+执行交易（合约也是一个交易），这里通过两个动作来生成一个交易，
+setcode，code描述了合约是如何运行的。
+setabi，abi描述了如何在二进制文件和json文件（代表了各种参数）中转换。
+从技术角度来将，abi是可选的，所有的EOSIO工具取决于它的易用性。
+
+eosio <= eosio::setcode  {...}
+这一行的阅读方式为：action setcode是eosio命名空间下的，同时它是通过eosio账户授权来执行的，带的参数有...
+
+注意，action是可以被多个合约执行的。
+
+此时私链日志显示：
+
+eosio generated block 11f6a66b... #6149 @ 2018-04-23T10:20:21.500 with 0 trxs, lib: 6148
+1221781ms thread-0   abi_serializer.hpp:349        extract              ] vo: {...}
+私链日志打出来合约部署的相关信息。其中vo的值很多，它的结构是：
+
+{
+    "signatures": [
+        "EOSJzRXuKWJT77BGmBv26SoHGcKkR1XyaCBzkd8Yck5wE9fFptcgLReQZ8wZsxjizAbMxELmVnFPYkv5rT5VDxYk3UoiRPDTC"（这一看就是公钥格式）
+    ], 
+    "compression": "zlib", 
+    "packed_context_free_data": "", 
+    "packed_trx": "很多内容"
+}
+这里面的结构包含一个签名串，一个加密信息，打包交易信息是核心数据，它包含了很长的交易相关的打包后的格式的内容。
+
+创建账户
+上面提到了如何在钱包中导入默认账户eosio，下面来看一下如何创建账户。
+
+注意：key和账户是分开的，我们接下来创建两个账户，他们可以使用同一套秘钥。
+
+创建秘钥
+首先，创建秘钥对：
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos create key
+Private key: 5KFGqe3Bv2maZ5jGMrufdkLhGV91ZYSysBWfxUUaR9VzbDk2UdA
+Public key: EOS6nbWS7ZReiPMdMABoEmVBYanyTMb3GYRQGsTRMCYx9vijWoaS3
+已生成一对公钥和私钥。下面将私钥导入我们自己的钱包wbs
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos wallet import -n wbs 5KFGqe3Bv2maZ5jGMrufdkLhGV91ZYSysBWfxUUaR9VzbDk2UdA
+imported private key for: EOS6nbWS7ZReiPMdMABoEmVBYanyTMb3GYRQGsTRMCYx9vijWoaS3
+注意格式：
+
+Usage: cleos wallet import [OPTIONS] key
+
+创建user和tester两个账户
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos create account eosio user EOS6nbWS7ZReiPMdMABoEmVBYanyTMb3GYRQGsTRMCYx9vijWoaS3 EOS6nbWS7ZReiPMdMABoEmVBYanyTMb3GYRQGsTRMCYx9vijWoaS3
+executed transaction: 927762a883e1c92a695a51c312eb5339bf911c1dbd56bab53e74d5fe20365106  352 bytes  102400 cycles
+#         eosio <= eosio::newaccount            {"creator":"eosio","name":"user","owner":{"threshold":1,"keys":[{"key":"EOS6nbWS7ZReiPMdMABoEmVBYany...
+注意，创建账户命令的格式是：cleos create account [OPTIONS] creator name OwnerKey ActiveKey
+
+使用create account命令来创建账户
+是由账户eosio创建的
+待创建的账户是user
+OwnerKey，如果在生产环境中，这个值应该保持高度安全
+ActiveKey，这是上面刚生成的密钥对中的公钥
+这里只是学习使用，这两个值可以设置成一个
+观察执行结果，这时的action是newaccount，后面是action的参数，以json格式存在。下面同理生成tester账户（只需更改上面的user为tester即可，秘钥采用同一个）。
+
+查询账户
+我们可以通过一个公钥来查询有它“管辖”的账户列表，这是通过eosio::account_history_api_plugin插件完成的操作：
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos get accounts EOS6nbWS7ZReiPMdMABoEmVBYanyTMb3GYRQGsTRMCYx9vijWoaS3
+{
+  "account_names": [
+    "tester",
+    "user"
+  ]
+}
+命令行是通过get accounts子命令来执行，后面要加入查询条件 -> 公钥。
+
+准备完毕
+通过以上的操作，我们熟悉了cleos命令的一些常用操作，包括创建钱包、加解锁，执行基础系统级合约，以及非常常用的创建秘钥、通过秘钥创建账户，通过秘钥反查账户。过程中，我们涉及到很多action的学习研究。
+
+学习
+我们已经准备好了钱包、账户、基本合约系统（用于支持基本action）。下面我们可以正式展开对智能合约的学习，本章主要通过源码中已经存在的较简单的token和exchange两个合约来学习。
+
+token
+为了避免混淆，我们根据上面学习过的内容，重新创建一个账户eosio.token专门用来执行token智能合约。
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos create account eosio eosio.token EOS6nbWS7ZReiPMdMABoEmVBYanyTMb3GYRQGsTRMCYx9vijWoaS3 EOS6nbWS7ZReiPMdMABoEmVBYanyTMb3GYRQGsTRMCYx9vijWoaS3
+executed transaction: 745de4ad0d7e2f415a1fb962e7f072d4c036e831bdf01f06931d91bc2fcc3a91  352 bytes  102400 cycles
+#         eosio <= eosio::newaccount            {"creator":"eosio","name":"eosio.token","owner":{"threshold":1,"keys":[{"key":"EOS6nbWS7ZReiPMdMABoE...
+接下来，我们使用这个账户部署eosio.token智能合约，同样通过上面学习到的方式：指定路径，指定加密账户{-p eosio.token}：
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos set contract eosio.token build/contracts/eosio.token -p eosio.token
+Reading WAST/WASM from build/contracts/eosio.token/eosio.token.wast...
+Assembling WASM...
+Publishing contract...
+executed transaction: a95dc5be83d202730f798d2ce75df42eff518a3ed8f82e4c5b0f3c8881d75d70  8024 bytes  2200576 cycles
+#         eosio <= eosio::setcode               {"account":"eosio.token","vmtype":0,"vmversion":0,"code":"0061736d01000000018a011660067f7e7f7f7f7f00...
+#         eosio <= eosio::setabi                {"account":"eosio.token","abi":{"types":[],"structs":[{"name":"transfer","base":"","fields":[{"name"...
+创建EOS的代币
+就像以太坊token那样，我们在EOS上可以更加方便的创建一个基于EOS的代币。首先，去token合约中的头文件eosio.token.hpp，查看一下token相关的接口都有哪些，其中有一个create函数，我们正是将要使用这个函数来创建token，所以我们可以留意一下它的参数都包括哪些。
+
+void create(account_name issuer, // 发行人，有权限调用下面的freeze、recall以及whitelist函数。
+            asset        maximum_supply, // 最大发行量，注意单位，这个单位就是该token的名字，symbol。
+            uint8_t      issuer_can_freeze,
+            uint8_t      issuer_can_recall,  
+            uint8_t      issuer_can_whitelist );
+我们可以通过命令行来调用该create函数：
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos push action eosio.token create '[ "eosio", "1000000000.0000 EOS", 0, 0, 0]' -p eosio.token
+executed transaction: 5b3f974030f7311a0c65cc6d4123be18f7435d0b06b615d939ff81255059aaf8  248 bytes  104448 cycles
+#   eosio.token <= eosio.token::create          {"issuer":"eosio","maximum_supply":"1000000000.0000 EOS","can_freeze":0,"can_recall":0,"can_whitelis...
+命令行使用push action来执行这个动作
+动作是eosio.token合约的create动作
+动作的参数包括：我们的发行人是eosio，发行量是10亿EOS，三个调用函数都是0
+动作的执行人（签名者）是eosio.token，用来授权这个动作的执行
+直接按参数顺序传入值比较方便，如果你需要更加准确的传值，可以将以上动作的参数内容改写为“Key，Value”的形式改造一下，会比较冗余。
+
+思考，这个token没有名字么？就像EOS之于ethereum那样。
+
+代币发放
+我们已经发行了一种代币EOS，下面我们可以将这个代币EOS发放给账户user（我们上面创建的）。继续查看那个eosio.token.hpp头文件中关于issue（发放）操作的参数。
+
+void issue( account_name to, asset quantity, string memo );// memo：备注，一般可以不填写。
+然后，我们继续使用命令行工具cleos来push action到智能合约eosio.token中这个issue函数中：
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos push action eosio.token issue '["user","100.0000 EOS", "memo"]' -p eosio
+executed transaction: b93b9e709ce4720dd5e89789c14a785790605ec093194710736cf30bb195fae9  256 bytes  124928 cycles
+#   eosio.token <= eosio.token::issue           {"to":"user","quantity":"100.0000 EOS","memo":"memo"}
+>> issue
+#   eosio.token <= eosio.token::transfer        {"from":"eosio","to":"user","quantity":"100.0000 EOS","memo":"memo"}
+>> transfer
+#         eosio <= eosio.token::transfer        {"from":"eosio","to":"user","quantity":"100.0000 EOS","memo":"memo"}
+#          user <= eosio.token::transfer        {"from":"eosio","to":"user","quantity":"100.0000 EOS","memo":"memo"}
+注意，在命令行结尾处，我们仍要使用账户来签名授权，这里是用户eosio（因为上面eosio是发行者，全都发行到它的兜里啦，所以要从它兜里取钱）。
+
+我们先来看issue函数的实现源码（目前分析源码还不太行，因为CMake不熟练，导致库引入有问题，所以不好分析源码，之后我会写一篇CMake的学习文章，然后会专门开一篇文章先来介绍智能合约部分的源码分析。先凑合看着）：
+
+void token::issue( account_name to, asset quantity, string memo ) 
+{
+    print( "issue" );// >> issue
+    auto sym = quantity.symbol.name();// EOS
+    stats statstable( _self, sym );
+    const auto& st = statstable.get( sym );// 通过代币id获取代币对象，包含代币相关信息
+
+    require_auth( st.issuer );// 检查发行人权限，是否有足够
+    eosio_assert( quantity.is_valid(), "invalid quantity" );// 转移金额是否有效
+    eosio_assert( quantity.amount > 0, "must issue positive quantity" );// 转移金额必须是正数
+
+    statstable.modify( st, 0, [&]( auto& s ) {
+       s.supply.amount += quantity.amount;
+    });
+
+    add_balance( st.issuer, quantity, st, st.issuer );// TODO: 转账金额居然要加到发行者的余额中？等于发行者转账完毕仍旧是原发行量？
+
+    if( to != st.issuer )// 别发给自己
+    {
+        //这是action的内部函数，执行转账的意思
+       dispatch_inline( permission_level{st.issuer,N(active)}, _self, N(transfer), &token::transfer, { st.issuer, to, quantity, memo } );
+    }
+}
+TODO: add_balance函数源码要好好研究
+
+执行发放动作，通过日志可以看到包括了几个步骤：
+
+eosio.token命名空间（就是代码中的eosio.token包内）下的发放函数issue，该操作由用户eosio.token授权（因为正是eosio.token授权的代币发行！）
+这三行transfer都是eosio.token命名空间下的transfer函数，他们都是内联交易：是由上面的发放函数issue自动触发的
+第一行由账户eosio.token授权，执行issue函数。">> issue"就是该函数的输出。
+第二行由账户eosio.token授权，执行transfer函数。">> transfer"就是该函数的输出。
+第三行和第四行应该是transfer内部调用（notified）sub_balance和add_balance
+实际上，eosio.token可以直接修改账户余额而不使用“内联调用transfer”。但是这种情况下，eosio.token智能合约会要求我们的token必须有所有的账户余额，通过计算引用过他们的所有交易动作的总和。它还需要发送者和接收者的存款情况，以支持他们可以自动处理充值和提现。
+
+如果你想看到广播出去的真实交易的情况，可以使用-d -j选项来表达“不要广播”以及“以json格式返回交易”：
+
+“不要广播”的意思是这条动作无效，只是用来做测试的。（这与上面的广播出去的“真实交易”不同）
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos wallet unlock
+password: Unlocked: default
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos push action eosio.token issue '["user","100.0000 EOS", "memo"]' -p eosio -d -j
+{
+  "expiration": "2018-04-24T02:13:26",
+  "region": 0,
+  "ref_block_num": 26069,
+  "ref_block_prefix": 2157111066,
+  "max_net_usage_words": 0,
+  "max_kcpu_usage": 0,
+  "delay_sec": 0,
+  "context_free_actions": [],
+  "actions": [{
+      "account": "eosio.token",
+      "name": "issue",
+      "authorization": [{
+          "actor": "eosio",
+          "permission": "active"
+        }
+      ],
+      "data": "00000000007015d640420f000000000004454f5300000000046d656d6f"
+    }
+  ],
+  "signatures": [
+    "EOSKjnxnDwjjyZaZPSeQnmMFYjpgBWRzby5YFqVqZEn6uA3TUhUo4yWmfQhXdxNykgsSVvAwGnkGUyUK7jcJt5qNg8xhstRqy"
+  ],
+  "context_free_data": []
+由于第二天来上班，我们的钱包已经被锁定，所以要先解锁，然后再调用上面的命令。可以看到输出的内容很多，是按照我们的要求“以json格式返回交易”，“不要广播”。我们可以看到交易的具体信息，包含了很多属性：有效期、地区、引用区块号、引用区块前缀、最大网络使用词数、最大cpu使用，延迟秒数、上下文的自由动作（为空说明上下文中没有动作），动作内容（包括动作执行人，动作名称，授权信息包括行动者以及权限状态、数据串、签名、上下文自由数据（为空，上下文无内容）。
+
+代币交易
+现在user账户已经存在100个EOS代币了，我们使用上面建立的另一个账户tester，用来测试代币交易：从user账户中转出一部分EOS到tester账户。
+
+同样的，我们还是先来看一下源码中设计的transfer函数的参数列表：
+
+void transfer(  account_name from, 
+                account_name to,
+                asset        quantity,
+                string       memo );
+很简单，下面使用cleos来调用：
+
+这里我们可以尝试使用user账户本身来签名动作。
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos push action eosio.token transfer '["user","tester","25.0000 EOS", "m"]' -p user
+executed transaction: a31e56b49837e53fb1e7d55aa7aba934dc751938241488183e54ad52dc7804fe  256 bytes  110592 cycles
+#   eosio.token <= eosio.token::transfer        {"from":"user","to":"tester","quantity":"25.0000 EOS","memo":"m"}
+>> transfer
+#          user <= eosio.token::transfer        {"from":"user","to":"tester","quantity":"25.0000 EOS","memo":"m"}
+#        tester <= eosio.token::transfer        {"from":"user","to":"tester","quantity":"25.0000 EOS","memo":"m"}
+成功！仍旧是eosio.token合约发起一个transfer交易动作，输出“>> transfer”，然后内联调用账户余额的操作分别操作发送者和接收者。
+
+注意：我们也可以不使用push action的方式来交易，而是直接使用cleos的自命令transfer即可，后面的命令参数与上面的差不多。但是发行和发放token仍旧需要使用合约的push action来操作。我理解的是由于交易比较常用且可不依赖某一个合约，所以被封装在了根命令中，而其他与合约相关的仍旧需要使用push action的方式。
+
+查看余额
+我们需要整体研究一下cleos的所有子命令，列举的方式比较枯燥，这里不展开，只是使用到哪里就展示哪里。我们上面进行了代币发放和代币交易，此时两个测试账户user和tester的EOS余额都发生了变化。下面我们要利用cleos查询一下这两个账户的代币EOS的余额状况：
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos get currency balance eosio.token user EOS
+75.0000 EOS
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos get currency balance eosio.token tester EOS
+25.0000 EOS
+可以看到user账户的代币余额为75，而tester账户的代币余额是25。这与我们上面的交易动作是可匹配的。
+
+重要发现
+上面我们留的TODO，因为我搞不懂为什么要先给代币发行人余额增加转账额，再转账，这个操作是怎么来的。我在上面查询余额的命令发现：
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos get currency balance eosio.token eosio EOS
+0.0000 EOS
+发行人的余额是0！
+
+所以这样我们就搞明白了为什么每次发放代币的时候要先add_balance然后再sub_balance了。
+
+exchange
+我们创建一个账户user1，然后用该账户部署合约exchange：
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos create account eosio user1 EOS6nbWS7ZReiPMdMABoEmVBYanyTMb3GYRQGsTRMCYx9vijWoaS3 EOS6nbWS7ZReiPMdMABoEmVBYanyTMb3GYRQGsTRMCYx9vijWoaS3
+executed transaction: b2c4a1acb831a4bd12d1686c271ca49b0ed85efe5a31f5c24abe212bc44d4009  352 bytes  102400 cycles
+#         eosio <= eosio::newaccount            {"creator":"eosio","name":"user1","owner":{"threshold":1,"keys":[{"key":"EOS6nbWS7ZReiPMdMABoEmVBYan...
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos set contract user1 build/contracts/exchange -p user1
+Reading WAST/WASM from build/contracts/exchange/exchange.wast...
+Assembling WASM...
+Publishing contract...
+executed transaction: 4e2bc4496ef25f187bb90da0f0b3398d5c1970ba62b062ab34160d09975c0591  34056 bytes  2200576 cycles
+#         eosio <= eosio::setcode               {"account":"user1","vmtype":0,"vmversion":0,"code":"0061736d0100000001cd023160067f7e7f7f7f7f0060037f...
+#         eosio <= eosio::setabi                {"account":"user1","abi":{"types":[{"new_type_name":"account_name","type":"name"}],"structs":[{"name...
+exchange合约能做的事情有很多，包括创建和交易currency（电子货币）。它能做的事可以参考源码位置contract/exchange/*。
+
+Eosio.msig
+msig的意思是multi-signature，多重签名的意思。这个合约是可以支持多方对同一笔交易进行异步签名，它是一个对用户友好的支持多方同意的异步进行提案、批复以及最终发布交易的合约。
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos create account eosio user2 EOS6nbWS7ZReiPMdMABoEmVBYanyTMb3GYRQGsTRMCYx9vijWoaS3 EOS6nbWS7ZReiPMdMABoEmVBYanyTMb3GYRQGsTRMCYx9vijWoaS3
+executed transaction: b156f5aa2fec6ca8ed6e55ba2be2e403cef0dd26f3c022a51e74f9ccf348fef2  352 bytes  102400 cycles
+#         eosio <= eosio::newaccount            {"creator":"eosio","name":"user2","owner":{"threshold":1,"keys":[{"key":"EOS6nbWS7ZReiPMdMABoEmVBYan...
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos set contract user2 build/contracts/eosio.msig -p user2
+Reading WAST/WASM from build/contracts/eosio.msig/eosio.msig.wast...
+Assembling WASM...
+Publishing contract...
+executed transaction: 66c64a3f55f011d40483c627ea43fd62f303fd96f9851141df67087867d4e02f  7320 bytes  2200576 cycles
+#         eosio <= eosio::setcode               {"account":"user2","vmtype":0,"vmversion":0,"code":"0061736d01000000016b1260017f0060047f7e7e7f006004...
+#         eosio <= eosio::setabi                {"account":"user2","abi":{"types":[{"new_type_name":"account_name","type":"name"},{"new_type_name":"...
+部署方式与前面没有大区别，这里使用的是账户user2，它能做的事可以参考源码位置contract/eosio.msig/*。
+
+我们尽量使用与合约名字相同的账户名字来发布合约，这样可以有效记录该账户的功能，可快速与其他普通用户做出区分。
+
+实战
+以上我们提取了eos.io合约中的三个，进行了部署、学习与操作演练，下面我们将尝试开发自己的基于eos的智能合约。
+
+eosiocpp构建合约文件系统
+eosiocpp：智能合约的引导程序工具。
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos/contracts$ eosiocpp -n testcontract
+created testcontract from skeleton
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos/contracts$ ls
+asserter  CMakeLists.txt  dice        eosiolib    eosio.system  exchange  identity  libc++            musl  proxy         skeleton  stltest   test_api_db   test_api_multi_index  test.inline
+bancor    currency        eosio.bios  eosio.msig  eosio.token   hello     infinite  multi_index_test  noop  simple.token  social    test_api  test_api_mem  testcontract          tic_tac_toe
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos/contracts$ cd testcontract/
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos/contracts/testcontract$ tree
+.
+├── testcontract.abi
+├── testcontract.cpp
+└── testcontract.hpp
+
+0 directories, 3 files
+我们在源码contracts目录下执行了以上命令以后，就会得到一个空的智能合约的开发框架，其中包含了abi,cpp以及hpp三个文件。
+
+hpp文件，是头文件，包括了cpp文件要使用到的变量、常量以及方法引用。
+testcontract.cpp
+
+/**
+ *  @file
+ *  @copyright defined in eos/LICENSE.txt
+ */
+#include <testcontract.hpp>
+
+/**
+ *  The init() and apply() methods must have C calling convention so that the blockchain can lookup and
+ *  call these methods.
+ */
+extern "C" {
+
+    /// The apply method implements the dispatch of events to this contract
+    void apply( uint64_t receiver, uint64_t code, uint64_t action ) {
+       eosio::print( "Hello World: ", eosio::name(code), "->", eosio::name(action), "\n" );
+    }
+
+} // extern "C"
+cpp文件(以上)，是源文件，编写了具体的合约执行方法。
+init方法和apply方法必须有C调用协定，区块链才可以查找以及调用这些方法。
+extern "C"{}，这是在C++ 代码中引入C语言的语法。
+init方法，是初始化仅执行一次的方法内容，例如eosio.token第一次的发行一种代币的发行量指定。
+apply方法的实现，参数包含接收者，代码，action。方法体是调用eosio库的打印方法print，拼串打印出相应信息。未来应该包含更多内容，它是一个action处理器，会监听所有进来的action，根据特定方法处理以后返回结果。其中该方法体中还会涉及针对传入参数的各种校验，例如code_filter，action_filter。
+目前cpp文件都是日志打印方面的内容，具体实现还是空的，当前这个合约不会有任何检查，包括权限，签名等。
+wast文件，WASM适用的由cpp文件编译后的文件格式，这是区块链接收的唯一格式。
+wast文件生成方式：
+
+eosiocpp -o ${contract}.wast ${contract}.cpp
+abi文件，Application Binary Interface，应用程序的二进制接口，这在以太坊是相同的概念，请参照《【精解】开发一个智能合约》。
+abi是一个json格式的，用来描述智能合约如何在action和二进制程序中进行转变的方法，也用来描述数据库状态。有了abi来描述你的智能合约，开发者和用户都可以通过JSON无缝地与合约进行交互。
+
+abi文件生成时源文件语法包括：
+
+typedef，可以自定义类型，供合约使用。在源文件中可通过typedef关键字导出类型。
+///@abi table，注解，标在一个类或者结构上，会通过eosiocpp工具生成abi文件中包含数据库表table的名字。
+///@abi action，注解，标在一个函数或方法上，这是合约暴露给外部的功能接口，外部可以调用这些动作。（可以给同一个功能函数定义多个action名字，例如//@abi action action1 action2大家都调用一个。）
+abi文件生成方式：
+
+eosiocpp -g ${contract}.abi ${contract}.hpp
+abi文件生成以后，我们可以找一个打开看一下，里面包含的内容很多，有各种属性，数据，方法功能的描述。
+
+helloworld
+部署学习和操作我们都已经学会，那么现在要开发一个helloworld智能合约，首先在eos源码中找到一个位置（因为要include相关库），建立一个目录hello，在里面创建一个
+1，hello.cpp，
+
+//
+// Created by liuwenbin on 18-4-24.
+//
+
+#include <eosiolib/eosio.hpp>
+#include <eosiolib/print.hpp>
+
+using namespace eosio;
+
+class hello : public eosio::contract {
+public:
+    using contract::contract;
+
+    /// @abi action
+    void hi(account_name user) {
+        print("Hello, ", name{user});
+    }
+};
+
+EOSIO_ABI(hello, (hi)) // CLion代码检查，这里会报错，先不理会
+2，编译wast
+
+在hello.cpp路径下执行：
+
+eosiocpp -o hello.wast hello.cpp
+会有很多警告出来，不要理会，查看一下，当前目录应该已经有了hello.wast。
+
+3，编译abi
+然后继续在hello.cpp路径下执行：
+
+eosiocpp -g hello.abi hello.cpp
+Generated hello.abi ...
+查看当前目录，又生成了一个hello.abi文件。
+
+我们的合约开发就完成了。下面的操作与上一章节的操作是类似的。
+我们先创建一个账户hello.a，然后用这个账户部署合约hello。部署完成以后，我们可以进行合约调用：
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos push action hello.a hi '["Edward"]' -p hello.a
+executed transaction: 8f4b9a4fe271a7981ee40348179dcdede025ebece10c38d0a4d5a0aa5d41ffac  232 bytes  102400 cycles
+#       hello.a <= hello.a::hi                  {"user":"Edward"}
+>> Hello, Edward
+通过账户hello.a 调用hi函数，传入参数'[用户名]'，使用hello.a签名该action。执行以后，会在日志中打印出“>> ...”。
+
+查询当前账户
+以上操作都是测试用账户，他们都是基于相同的公钥创建的，我们现在来查看下目前该公钥有多少个账户：
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos get accounts EOS6nbWS7ZReiPMdMABoEmVBYanyTMb3GYRQGsTRMCYx9vijWoaS3
+{
+  "account_names": [
+    "eosio.token",
+    "hello.a",
+    "tester",
+    "tokener",
+    "user",
+    "user1",
+    "user2"
+  ]
+}
+加入权限
+目前我们的hello合约是不限制hi参数的，也就是说其实我们是没有“Edward”这个签名人的，也就是说这个参数中无论是否传入账户名，都可以输出。
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos push action hello.a hi '["Edward"]' -p user
+executed transaction: fc38858f89e7dfdd9dcff8db8626545f387960cee63f80e8352b7f7596a986a7  232 bytes  102400 cycles
+#       hello.a <= hello.a::hi                  {"user":"Edward"}
+>> Hello, liuwenbin
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos push action hello.a hi '["Edward"]' -p user1
+executed transaction: f81acea4f1ef9207afc5827608fd255bda063b0a0aeaa214f6bc2742ce480a34  232 bytes  102400 cycles
+#       hello.a <= hello.a::hi                  {"user":"Edward"}
+>> Hello, liuwenbin
+另外，我们可以使用user，也可以使用user1来签名hello.a部署的我们的hello智能合约，这显然是不合理的。
+
+我们期望智能合约hi函数的参数必须是有效账户名，同时只有该账户拥有当前action的签名权。所以，我们要修改hello.cpp文件。
+
+/// @abi action
+void hi(account_name user) {
+    require_auth(user);// 只有该user账户有权签名当前action
+    print("Hello, ", name{user});
+}
+然后重复以上编译和部署的操作。再传入非有效账户名时，或者用其他账户签名的时候就会报错：
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos push action hello.a hi '["Edward"]' -p hello.a
+Error 3120001: Invalid name
+Name should be less than 13 characters and only contains the following symbol .12345abcdefghijklmnopqrstuvwxyz
+Error Details:
+Name not properly normalized (name: Edward, normalized: .dward) 
+'["Edward"]' is invalid args for action 'hi' code 'hello.a'
+报错Edward不是有效参数。
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos push action hello.a hi '["user"]' -p hello.a
+Error 3030001: missing required authority
+Ensure that you have the related authority inside your transaction!;
+If you are currently using 'cleos push action' command, try to add the relevant authority using -p option.
+Error Details:
+missing authority of user
+hello.a无法给账户user签名。
+
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos push action hello.a hi '["tester"]' -p tester
+executed transaction: be235f5fbd6173a4acac23b8faf4cd3de9d73721b839d3092b2db23eaa3ef51d  232 bytes  102400 cycles
+#       hello.a <= hello.a::hi                  {"user":"tester"}
+>> Hello, tester
+成功！我们传入有效用户名tester，并且用tester账户本身去签名当前action，最终成功输出了结果。
+
+思考，我们可发现其他eos的智能合约都是符合以上期望的，这是什么规则？
+
+这是Ricardian Contract，意思是该合约符合李嘉图等价原则。
+
+李嘉图等价的合约，会指定其合法绑定者来关联该合约的每一个action。
+
+关于账户和合约关系的一些心得：
+
+可以使用某个账户作为合约发布者，那么该账户就拥有了此合约的操作权，后续对该合约的操作不必再写合约名字，直接使用该账户加上合约内部函数即可。
+一个账户可以发布多次不同的合约，但是以最后一次为有效，因为作为合约code的hash是只有一个，每次部署新的合约会覆盖原有的。
+liuwenbin@liuwenbin-H81M-DS2:~/work/CLionProjects/github.com/eos$ cleos get code hello.a
+code hash: 7c6a300874835ad928de4f30712023758157bd50cb423ab039443f56a84167ff
+多个账户可以发布同一个合约，并没有限制，只是要使用哪个账户的，就得指定哪个账户名，这个特点我想可以与合约版本调试结合使用。
+合约使用的时候通过action，而每次action涉及到交易的都要签名，一般是from用户签名（扣钱了你得拿到用户密码，一样的道理），其他合约的action可能不必签名，例如查询action。
+调试
+我们编写一个智能合约，需要在本地私有链上进行调试，通过以后再上公有链。
+
+官方声称这叫做Caveman debugging（瞬间不想再爱了，照以太坊差远了），什么意思呢？就是eosio::print可以输出log来调试，EOS目前没办法进行代码断点调试。
+
+总结
+本文介绍了EOS智能合约的内容，这部分内容的确比以太坊的要少很多，因为以太坊上面成熟的开发框架更多一些，功能也更强大（例如可以断点调试，本地虚机等），而EOS比较新，在这方面没有那么多工具可选。但是EOS的智能合约比起使用Solidity的以太坊合约来讲，还是非常方便的，很多想法也比较新颖。本文主要从准备、学习、实战和调试这几个步骤进行循序渐进地了解与学习。这期间，我们学习了bios、token、exchange、msig以及自己实现了helloworld合约，掌握了钱包、账户、签名权限等很多基本功能，熟悉了cleos和eosiocpp命令的使用，掌握了智能合约的编写、编译、部署以及调试的知识。
+
+参考资料
+EOS官方文档
