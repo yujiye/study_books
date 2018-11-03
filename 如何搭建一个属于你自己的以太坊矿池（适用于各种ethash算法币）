@@ -1,0 +1,76 @@
+如何搭建一个属于你自己的以太坊矿池（适用于各种ethash算法币）
+Ace lee 7个月前 (04-05) 19745浏览
+
+预备知识
+懂一点Linux 操作
+懂一点BlockChain
+懂一点Programming
+如果你都不懂也还是可以，知其然不知其所以然罢了。
+
+前置准备
+一台至少1GB RAM跟至少50GB (取决于Blockchain帐本大小)的Server。
+OS选择Ubunutu 16.04 LTS。
+
+建置流程
+开一台Ubuntu 16.04。
+安装必要的套件。
+
+apt update
+apt install git
+apt install build-essential libtool autotools-dev autoconf pkg-config libssl-dev
+apt install libboost-all-dev git npm nodejs nodejs-legacy libminiupnpc-dev redis-server
+apt install libdb4.8-dev libdb4.8++-dev
+apt install golang
+apt install nginx
+apt install npm
+根据你要架设的矿池装对应的钱包同步套件clone 回来，以ETH 来说那就是：
+
+git clone https://github.com/ethereum/go-ethereum
+接着把套件装起来。
+
+cd go-ethereum
+make geth
+装好后运行build/bin/geth待节点同步完成就可以使用了，你也可以用他产生钱包、挖矿、开发等，更详细的操作可以去Wiki查看。
+
+现在，设定好了节点，接下来就是把矿池架起来。
+
+git config --global http.https://gopkg.in.followRedirects true
+git clone https://github.com/sammy007/open-ethereum-pool.git
+cd open-ethereum-pool
+make
+安装redis。
+
+apt install redis
+然后把矿池跑起来。
+
+./build/bin/open-ethereum-pool config.json
+config.json可以参考目录底下的config.example.json作相对应的修改。
+你可以查看Wiki来对矿池做更多的修正。
+
+有了矿池的后端，现在你还需要一个前端的页面让使用者看。
+
+cd www
+对www/config/environment.js做任何你想要的修改。
+里面的ApiUrl: '//example.net/'请务必更改为你的矿池网址。
+
+接着将前端install 起来。
+
+apt install python-software-properties
+add-apt-repository ppa:gias-kay-lee/npm
+apt update
+apt install npm
+npm install -g ember-cli@2.9.1
+npm install -g bower
+npm install
+bower install
+./build.sh
+最后的最后，把nginx 设定好。
+
+upstream api {
+    server 127.0.0.1:8080;
+}
+
+location /api {
+    proxy_pass http://api;
+}
+这样，一个简单的矿池就架起来啰！
